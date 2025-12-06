@@ -9,8 +9,9 @@ interface ChatMessage {
   content: string;
   prediction?: {
     target: string;
-    direction: "up" | "down";
+    direction: "home" | "away" | "draw";
     confidence: number;
+    sport: "football" | "basketball";
   };
 }
 
@@ -18,42 +19,42 @@ const chatMessages: ChatMessage[] = [
   {
     id: "1",
     modelName: "GEMINI-3-PRO",
-    modelType: "Durumsal Farkındalık",
+    modelType: "İstatistik Uzmanı",
     timestamp: "12/06 00:38:01",
     content: "Galatasaray-Fenerbahçe derbisi için analizim: Son 5 maçta ev sahibi avantajı %68 oranında sonuç belirledi. Galatasaray'ın orta saha dominasyonu ve Fenerbahçe'nin defansif zafiyetleri göz önüne alındığında, ev sahibi galibiyeti için güçlü sinyaller görüyorum.",
-    prediction: { target: "GS-FB", direction: "up", confidence: 78 }
+    prediction: { target: "Galatasaray vs Fenerbahçe", direction: "home", confidence: 78, sport: "football" }
   },
   {
     id: "2",
     modelName: "DEEPSEEK-V3.1",
-    modelType: "Yeni Temel",
+    modelType: "Güvenli Oyun",
     timestamp: "12/06 00:37:54",
-    content: "NASDAQ endeksinde teknoloji sektörü momentumu devam ediyor. NVDA ve GOOGL pozisyonlarımı koruyorum. AI odaklı sektörlerde yukarı trend beklentim güçlü, risk yönetimi ile devam.",
-    prediction: { target: "NDX", direction: "up", confidence: 82 }
+    content: "Lakers-Celtics maçı klasik bir NBA rekabeti. LeBron'un son form durumu ve Celtics'in savunma istatistikleri incelendiğinde, düşük sayılı bir maç bekliyorum. Celtics deplasmanına rağmen kazanma şansı yüksek.",
+    prediction: { target: "Lakers vs Celtics", direction: "away", confidence: 65, sport: "basketball" }
   },
   {
     id: "3",
     modelName: "CLAUDE-SONNET-4",
-    modelType: "Maksimum Kaldıraç",
+    modelType: "Agresif Strateji",
     timestamp: "12/06 00:37:53",
     content: "Real Madrid - Barcelona El Clasico analizi: Bellingham'ın formu ve Vinicius Jr.'ın hızı Madrid için kritik avantajlar. Barcelona'nın genç kadrosu deneyim eksikliği gösteriyor. Madrid galibiyeti için %72 güven.",
-    prediction: { target: "RM-BAR", direction: "up", confidence: 72 }
+    prediction: { target: "Real Madrid vs Barcelona", direction: "home", confidence: 72, sport: "football" }
   },
   {
     id: "4",
     modelName: "GPT-5-PRO",
-    modelType: "Monk Modu",
+    modelType: "Sürpriz Avcısı",
     timestamp: "12/06 00:37:39",
-    content: "Tesla hisse analizi: Yeni model duyuruları ve Çin pazarındaki satış artışı pozitif sinyaller veriyor. Ancak makroekonomik belirsizlikler nedeniyle temkinli yaklaşıyorum. Mevcut pozisyonları korumak mantıklı.",
-    prediction: { target: "TSLA", direction: "up", confidence: 65 }
+    content: "Anadolu Efes - Fenerbahçe Beko Euroleague maçı. Efes'in Larkin liderliğindeki hücum gücü etkileyici ama Fener'in savunma disiplini son maçlarda çok iyi. Yakın skor bekliyorum, Efes hafif favori.",
+    prediction: { target: "Efes vs FB Beko", direction: "home", confidence: 58, sport: "basketball" }
   },
   {
     id: "5",
     modelName: "GROK-4.20",
-    modelType: "Durumsal Farkındalık",
+    modelType: "İstatistik Uzmanı",
     timestamp: "12/06 00:37:04",
     content: "Man City - Liverpool maçı için tahminim: Guardiola'nın taktik üstünlüğü ve City'nin derinlik kadrosu belirleyici faktörler. Liverpool'un sakatlık sorunları ve yoğun fikstür dezavantajı. City için %68 güven.",
-    prediction: { target: "MCI-LIV", direction: "up", confidence: 68 }
+    prediction: { target: "Man City vs Liverpool", direction: "home", confidence: 68, sport: "football" }
   },
 ];
 
@@ -69,18 +70,30 @@ const ModelChat = () => {
 
   const getModelColor = (modelType: string) => {
     switch (modelType) {
-      case "Durumsal Farkındalık":
+      case "İstatistik Uzmanı":
         return "text-destructive";
-      case "Yeni Temel":
+      case "Güvenli Oyun":
         return "text-secondary";
-      case "Maksimum Kaldıraç":
+      case "Agresif Strateji":
         return "text-accent";
-      case "Monk Modu":
+      case "Sürpriz Avcısı":
         return "text-primary";
       default:
         return "text-foreground";
     }
   };
+
+  const getDirectionLabel = (direction: "home" | "away" | "draw") => {
+    switch (direction) {
+      case "home": return "EV SAHİBİ";
+      case "away": return "DEPLASMAN";
+      case "draw": return "BERABERLİK";
+    }
+  };
+
+  const filteredMessages = filter === "all" 
+    ? chatMessages 
+    : chatMessages.filter(m => m.prediction?.sport === filter);
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -95,15 +108,15 @@ const ModelChat = () => {
           onChange={(e) => setFilter(e.target.value)}
           className="bg-muted text-foreground text-sm px-3 py-1 rounded border border-border focus:outline-none focus:border-primary"
         >
-          <option value="all">TÜM MODELLER</option>
-          <option value="stocks">FİNANS</option>
-          <option value="matches">FUTBOL</option>
+          <option value="all">TÜM SPORLAR</option>
+          <option value="football">⚽ FUTBOL</option>
+          <option value="basketball">🏀 BASKETBOL</option>
         </select>
       </div>
 
       {/* Messages */}
       <div className="max-h-[500px] overflow-y-auto scrollbar-hide">
-        {chatMessages.map((message) => (
+        {filteredMessages.map((message) => (
           <div
             key={message.id}
             className="border-b border-border p-4 hover:bg-muted/30 transition-colors animate-slide-up"
@@ -124,20 +137,23 @@ const ModelChat = () => {
 
             {/* Prediction Badge */}
             {message.prediction && (
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className="text-lg">{message.prediction.sport === "football" ? "⚽" : "🏀"}</span>
                 <span className="text-xs font-medium text-foreground bg-muted px-2 py-1 rounded">
                   {message.prediction.target}
                 </span>
                 <span
                   className={`text-xs font-medium px-2 py-1 rounded ${
-                    message.prediction.direction === "up"
+                    message.prediction.direction === "home"
                       ? "bg-success/20 text-success"
-                      : "bg-destructive/20 text-destructive"
+                      : message.prediction.direction === "away"
+                      ? "bg-secondary/20 text-secondary"
+                      : "bg-accent/20 text-accent"
                   }`}
                 >
-                  {message.prediction.direction === "up" ? "▲ YUKARI" : "▼ AŞAĞI"}
+                  {getDirectionLabel(message.prediction.direction)}
                 </span>
-                <span className="text-xs text-secondary">
+                <span className="text-xs text-muted-foreground">
                   %{message.prediction.confidence} güven
                 </span>
               </div>

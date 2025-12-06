@@ -8,13 +8,14 @@ interface Match {
   date: string;
   time: string;
   homeOdds: number;
-  drawOdds: number;
+  drawOdds?: number;
   awayOdds: number;
   aiPrediction: {
     result: "home" | "draw" | "away";
     confidence: number;
   };
   activeBets: number;
+  sport: "football" | "basketball";
 }
 
 const upcomingMatches: Match[] = [
@@ -30,9 +31,23 @@ const upcomingMatches: Match[] = [
     awayOdds: 4.20,
     aiPrediction: { result: "home", confidence: 72 },
     activeBets: 847,
+    sport: "football",
   },
   {
     id: "2",
+    homeTeam: "Anadolu Efes",
+    awayTeam: "Fenerbahçe Beko",
+    league: "Euroleague",
+    date: "15 Aralık",
+    time: "20:00",
+    homeOdds: 1.72,
+    awayOdds: 2.15,
+    aiPrediction: { result: "home", confidence: 62 },
+    activeBets: 534,
+    sport: "basketball",
+  },
+  {
+    id: "3",
     homeTeam: "Real Madrid",
     awayTeam: "Barcelona",
     league: "La Liga",
@@ -43,9 +58,23 @@ const upcomingMatches: Match[] = [
     awayOdds: 3.80,
     aiPrediction: { result: "home", confidence: 68 },
     activeBets: 1243,
+    sport: "football",
   },
   {
-    id: "3",
+    id: "4",
+    homeTeam: "Lakers",
+    awayTeam: "Celtics",
+    league: "NBA",
+    date: "16 Aralık",
+    time: "03:30",
+    homeOdds: 2.10,
+    awayOdds: 1.75,
+    aiPrediction: { result: "away", confidence: 65 },
+    activeBets: 1876,
+    sport: "basketball",
+  },
+  {
+    id: "5",
     homeTeam: "Man City",
     awayTeam: "Liverpool",
     league: "Premier League",
@@ -56,31 +85,13 @@ const upcomingMatches: Match[] = [
     awayOdds: 3.40,
     aiPrediction: { result: "home", confidence: 58 },
     activeBets: 1567,
-  },
-  {
-    id: "4",
-    homeTeam: "PSG",
-    awayTeam: "Bayern Münih",
-    league: "Champions League",
-    date: "18 Aralık",
-    time: "21:00",
-    homeOdds: 2.40,
-    drawOdds: 3.25,
-    awayOdds: 2.90,
-    aiPrediction: { result: "away", confidence: 54 },
-    activeBets: 2134,
+    sport: "football",
   },
 ];
 
-const getPredictionLabel = (result: "home" | "draw" | "away", homeTeam: string, awayTeam: string) => {
-  switch (result) {
-    case "home":
-      return `${homeTeam} Kazanır`;
-    case "draw":
-      return "Beraberlik";
-    case "away":
-      return `${awayTeam} Kazanır`;
-  }
+const getPredictionLabel = (result: "home" | "draw" | "away", homeTeam: string, awayTeam: string, sport: string) => {
+  if (result === "draw") return "Beraberlik";
+  return result === "home" ? `${homeTeam} Kazanır` : `${awayTeam} Kazanır`;
 };
 
 const UpcomingMatches = () => {
@@ -101,7 +112,10 @@ const UpcomingMatches = () => {
           <div key={match.id} className="p-4 hover:bg-muted/30 transition-colors">
             {/* League & Time */}
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-secondary font-medium">{match.league}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{match.sport === "football" ? "⚽" : "🏀"}</span>
+                <span className="text-xs text-secondary font-medium">{match.league}</span>
+              </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Calendar size={12} />
                 {match.date}
@@ -124,15 +138,17 @@ const UpcomingMatches = () => {
             </div>
 
             {/* Odds */}
-            <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className={`grid ${match.sport === "basketball" ? "grid-cols-2" : "grid-cols-3"} gap-2 mb-3`}>
               <div className={`text-center p-2 rounded ${match.aiPrediction.result === "home" ? "bg-primary/20 border border-primary" : "bg-muted"}`}>
                 <div className="text-xs text-muted-foreground mb-1">1</div>
                 <div className="font-mono font-medium text-foreground">{match.homeOdds}</div>
               </div>
-              <div className={`text-center p-2 rounded ${match.aiPrediction.result === "draw" ? "bg-primary/20 border border-primary" : "bg-muted"}`}>
-                <div className="text-xs text-muted-foreground mb-1">X</div>
-                <div className="font-mono font-medium text-foreground">{match.drawOdds}</div>
-              </div>
+              {match.drawOdds && (
+                <div className={`text-center p-2 rounded ${match.aiPrediction.result === "draw" ? "bg-primary/20 border border-primary" : "bg-muted"}`}>
+                  <div className="text-xs text-muted-foreground mb-1">X</div>
+                  <div className="font-mono font-medium text-foreground">{match.drawOdds}</div>
+                </div>
+              )}
               <div className={`text-center p-2 rounded ${match.aiPrediction.result === "away" ? "bg-primary/20 border border-primary" : "bg-muted"}`}>
                 <div className="text-xs text-muted-foreground mb-1">2</div>
                 <div className="font-mono font-medium text-foreground">{match.awayOdds}</div>
@@ -144,7 +160,7 @@ const UpcomingMatches = () => {
               <div className="flex items-center gap-2">
                 <TrendingUp size={14} className="text-primary" />
                 <span className="text-xs text-foreground">
-                  AI: <span className="text-primary font-medium">{getPredictionLabel(match.aiPrediction.result, match.homeTeam, match.awayTeam)}</span>
+                  AI: <span className="text-primary font-medium">{getPredictionLabel(match.aiPrediction.result, match.homeTeam, match.awayTeam, match.sport)}</span>
                 </span>
                 <span className="text-xs text-muted-foreground">(%{match.aiPrediction.confidence} güven)</span>
               </div>

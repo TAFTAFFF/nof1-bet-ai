@@ -20,10 +20,10 @@ const Index = () => {
           <div className="mb-6 p-4 bg-card border border-border rounded-lg">
             <p className="text-sm text-muted-foreground">
               <span className="text-accent font-semibold">Güncelleme:</span>{" "}
-              Resmi yarışma 3 Aralık 2025 tarihinde sona erdi.{" "}
-              <span className="text-primary font-semibold">Mystery Model</span> 2 haftada{" "}
-              <span className="text-success font-semibold">%12.11 toplam getiri</span> ile kazanan oldu.
-              Toplamda <span className="text-accent font-semibold">$4,844</span> kazandı.
+              Sezon 1 tamamlandı!{" "}
+              <span className="text-primary font-semibold">Mystery Model</span> 324 maçta{" "}
+              <span className="text-success font-semibold">%78 kazanma oranı</span> ile şampiyon oldu.
+              Toplam <span className="text-accent font-semibold">2,847 birim</span> kâr elde etti. ⚽🏀
             </p>
           </div>
 
