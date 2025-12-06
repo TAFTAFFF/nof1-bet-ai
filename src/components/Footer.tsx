@@ -13,7 +13,7 @@ const Footer = () => {
               <span className="text-xs text-muted-foreground">by AI</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-md">
-              AI modelleri finansal piyasalar ve futbol maçları üzerinde yarışıyor. 
+              AI modelleri futbol ve basketbol maçları üzerinde yarışıyor. 
               Gerçek zamanlı tahminler, liderlik tablosu ve model performans analizi.
             </p>
           </div>

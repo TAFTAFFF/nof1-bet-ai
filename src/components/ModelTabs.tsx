@@ -8,10 +8,10 @@ interface Model {
 
 const models: Model[] = [
   { id: "aggregate", name: "Toplam Endeks", strategy: "Tüm modellerin ortalaması" },
-  { id: "baseline", name: "1: Yeni Temel", strategy: "Muhafazakâr strateji" },
-  { id: "monk", name: "2: Monk Modu", strategy: "Sabırlı ve düşük risk" },
-  { id: "awareness", name: "3: Durumsal Farkındalık", strategy: "Piyasa analizi" },
-  { id: "leverage", name: "4: Maksimum Kaldıraç", strategy: "Agresif strateji" },
+  { id: "conservative", name: "1: Güvenli Oyun", strategy: "Düşük riskli bahisler" },
+  { id: "underdog", name: "2: Sürpriz Avcısı", strategy: "Yüksek oranlı tahminler" },
+  { id: "stats", name: "3: İstatistik Uzmanı", strategy: "Veri odaklı analiz" },
+  { id: "aggressive", name: "4: Agresif Strateji", strategy: "Yüksek risk, yüksek kazanç" },
 ];
 
 interface ModelTabsProps {

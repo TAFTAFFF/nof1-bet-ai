@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 
 const generateChartData = () => {
   const data = [];
-  let value = 10000;
+  let value = 1000;
   const days = 30;
   
   for (let i = 0; i < days; i++) {
-    const change = (Math.random() - 0.4) * 500;
+    const change = (Math.random() - 0.4) * 80;
     value += change;
     data.push({
       day: `Gün ${i + 1}`,
@@ -33,9 +33,9 @@ const ChartSection = () => {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div>
-          <h3 className="font-display font-semibold text-foreground">ORTALAMA TOPLAM HESAP DEĞERİ</h3>
+          <h3 className="font-display font-semibold text-foreground">TOPLAM BAHİS PERFORMANSI</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Alpha Arena Sezon 1.5'teki tüm yarışmalar boyunca toplam performans
+            AI Arena Sezon 1'deki tüm futbol ve basketbol tahminlerinin toplam performansı
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -63,7 +63,7 @@ const ChartSection = () => {
       </div>
 
       {/* Stats Bar */}
-      <div className="flex items-center gap-6 px-4 py-3 bg-muted/30 border-b border-border">
+      <div className="flex items-center gap-6 px-4 py-3 bg-muted/30 border-b border-border flex-wrap">
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">Toplam Getiri:</span>
           <span className={`font-mono font-bold ${isPositive ? "text-success" : "text-destructive"}`}>
@@ -75,8 +75,12 @@ const ChartSection = () => {
           <span className="font-mono font-bold text-accent">Mystery Model</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Toplam:</span>
-          <span className="font-mono font-bold text-foreground">${endValue.toLocaleString()}</span>
+          <span className="text-xs text-muted-foreground">Toplam Birim:</span>
+          <span className="font-mono font-bold text-foreground">{endValue.toLocaleString()}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Maç Sayısı:</span>
+          <span className="font-mono font-bold text-secondary">324</span>
         </div>
       </div>
 
@@ -101,8 +105,7 @@ const ChartSection = () => {
               axisLine={false}
               tickLine={false}
               tick={{ fill: "hsl(0, 0%, 60%)", fontSize: 10 }}
-              tickFormatter={(value) => `$${(value / 1000).toFixed(1)}k`}
-              domain={["dataMin - 500", "dataMax + 500"]}
+              domain={["dataMin - 50", "dataMax + 50"]}
             />
             <Tooltip
               contentStyle={{
@@ -113,7 +116,7 @@ const ChartSection = () => {
                 fontSize: "12px",
               }}
               labelStyle={{ color: "hsl(0, 0%, 60%)" }}
-              formatter={(value: number) => [`$${value.toLocaleString()}`, "Değer"]}
+              formatter={(value: number) => [`${value.toLocaleString()} birim`, "Değer"]}
             />
             <Area
               type="monotone"
