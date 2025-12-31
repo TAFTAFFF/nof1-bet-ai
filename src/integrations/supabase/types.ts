@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       predictions: {
         Row: {
+          analysis: string | null
           confidence_score: number
           created_at: string
           id: string
@@ -24,6 +25,7 @@ export type Database = {
           prediction: string
         }
         Insert: {
+          analysis?: string | null
           confidence_score: number
           created_at?: string
           id?: string
@@ -32,6 +34,7 @@ export type Database = {
           prediction: string
         }
         Update: {
+          analysis?: string | null
           confidence_score?: number
           created_at?: string
           id?: string
