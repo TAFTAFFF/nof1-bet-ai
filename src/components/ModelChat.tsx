@@ -1,66 +1,10 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Sparkles, Bot } from "lucide-react";
-
-interface ChatMessage {
-  id: string;
-  modelName: string;
-  modelType: string;
-  timestamp: string;
-  content: string;
-  prediction?: {
-    target: string;
-    direction: "home" | "away" | "draw";
-    confidence: number;
-    sport: "football" | "basketball";
-  };
-}
-
-const chatMessages: ChatMessage[] = [
-  {
-    id: "1",
-    modelName: "GEMINI-3-PRO",
-    modelType: "İstatistik Uzmanı",
-    timestamp: "12/06 00:38:01",
-    content: "Galatasaray-Fenerbahçe derbisi için analizim: Son 5 maçta ev sahibi avantajı %68 oranında sonuç belirledi. Galatasaray'ın orta saha dominasyonu ve Fenerbahçe'nin defansif zafiyetleri göz önüne alındığında, ev sahibi galibiyeti için güçlü sinyaller görüyorum.",
-    prediction: { target: "Galatasaray vs Fenerbahçe", direction: "home", confidence: 78, sport: "football" }
-  },
-  {
-    id: "2",
-    modelName: "DEEPSEEK-V3.1",
-    modelType: "Güvenli Oyun",
-    timestamp: "12/06 00:37:54",
-    content: "Lakers-Celtics maçı klasik bir NBA rekabeti. LeBron'un son form durumu ve Celtics'in savunma istatistikleri incelendiğinde, düşük sayılı bir maç bekliyorum. Celtics deplasmanına rağmen kazanma şansı yüksek.",
-    prediction: { target: "Lakers vs Celtics", direction: "away", confidence: 65, sport: "basketball" }
-  },
-  {
-    id: "3",
-    modelName: "CLAUDE-SONNET-4",
-    modelType: "Agresif Strateji",
-    timestamp: "12/06 00:37:53",
-    content: "Real Madrid - Barcelona El Clasico analizi: Bellingham'ın formu ve Vinicius Jr.'ın hızı Madrid için kritik avantajlar. Barcelona'nın genç kadrosu deneyim eksikliği gösteriyor. Madrid galibiyeti için %72 güven.",
-    prediction: { target: "Real Madrid vs Barcelona", direction: "home", confidence: 72, sport: "football" }
-  },
-  {
-    id: "4",
-    modelName: "GPT-5-PRO",
-    modelType: "Sürpriz Avcısı",
-    timestamp: "12/06 00:37:39",
-    content: "Anadolu Efes - Fenerbahçe Beko Euroleague maçı. Efes'in Larkin liderliğindeki hücum gücü etkileyici ama Fener'in savunma disiplini son maçlarda çok iyi. Yakın skor bekliyorum, Efes hafif favori.",
-    prediction: { target: "Efes vs FB Beko", direction: "home", confidence: 58, sport: "basketball" }
-  },
-  {
-    id: "5",
-    modelName: "GROK-4.20",
-    modelType: "İstatistik Uzmanı",
-    timestamp: "12/06 00:37:04",
-    content: "Man City - Liverpool maçı için tahminim: Guardiola'nın taktik üstünlüğü ve City'nin derinlik kadrosu belirleyici faktörler. Liverpool'un sakatlık sorunları ve yoğun fikstür dezavantajı. City için %68 güven.",
-    prediction: { target: "Man City vs Liverpool", direction: "home", confidence: 68, sport: "football" }
-  },
-];
+import { ChevronDown, ChevronUp, Sparkles, Bot, Loader2 } from "lucide-react";
+import { usePredictions } from "@/hooks/usePredictions";
 
 const ModelChat = () => {
   const [expandedMessages, setExpandedMessages] = useState<string[]>([]);
-  const [filter, setFilter] = useState("all");
+  const { data: predictions, isLoading, error } = usePredictions();
 
   const toggleExpand = (id: string) => {
     setExpandedMessages((prev) =>
@@ -68,32 +12,29 @@ const ModelChat = () => {
     );
   };
 
-  const getModelColor = (modelType: string) => {
-    switch (modelType) {
-      case "İstatistik Uzmanı":
-        return "text-destructive";
-      case "Güvenli Oyun":
-        return "text-secondary";
-      case "Agresif Strateji":
-        return "text-accent";
-      case "Sürpriz Avcısı":
-        return "text-primary";
-      default:
-        return "text-foreground";
-    }
+  const getModelColor = (modelName: string) => {
+    if (modelName.includes("Mystery")) return "text-destructive";
+    if (modelName.includes("StatMaster")) return "text-secondary";
+    if (modelName.includes("OddsOracle")) return "text-accent";
+    if (modelName.includes("BetGenius")) return "text-primary";
+    return "text-foreground";
   };
 
-  const getDirectionLabel = (direction: "home" | "away" | "draw") => {
-    switch (direction) {
-      case "home": return "EV SAHİBİ";
-      case "away": return "DEPLASMAN";
-      case "draw": return "BERABERLİK";
-    }
+  const getSportEmoji = (matchName: string) => {
+    const basketballKeywords = ["Lakers", "Celtics", "Warriors", "Nuggets", "Efes", "Beko", "NBA"];
+    return basketballKeywords.some(k => matchName.includes(k)) ? "🏀" : "⚽";
   };
 
-  const filteredMessages = filter === "all" 
-    ? chatMessages 
-    : chatMessages.filter(m => m.prediction?.sport === filter);
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("tr-TR", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
@@ -103,88 +44,84 @@ const ModelChat = () => {
           <Bot className="text-primary" size={20} />
           <span className="font-display font-semibold text-foreground">MODEL TAHMİNLERİ</span>
         </div>
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="bg-muted text-foreground text-sm px-3 py-1 rounded border border-border focus:outline-none focus:border-primary"
-        >
-          <option value="all">TÜM SPORLAR</option>
-          <option value="football">⚽ FUTBOL</option>
-          <option value="basketball">🏀 BASKETBOL</option>
-        </select>
+        <span className="text-xs text-muted-foreground">Veritabanından</span>
       </div>
 
       {/* Messages */}
       <div className="max-h-[500px] overflow-y-auto scrollbar-hide">
-        {filteredMessages.map((message) => (
+        {isLoading && (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="animate-spin text-primary" size={24} />
+          </div>
+        )}
+        
+        {error && (
+          <div className="p-4 text-center text-destructive">
+            Veriler yüklenirken hata oluştu
+          </div>
+        )}
+
+        {predictions?.map((prediction) => (
           <div
-            key={message.id}
+            key={prediction.id}
             className="border-b border-border p-4 hover:bg-muted/30 transition-colors animate-slide-up"
           >
             {/* Message Header */}
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Sparkles size={14} className={getModelColor(message.modelType)} />
-                <span className={`font-semibold ${getModelColor(message.modelType)}`}>
-                  {message.modelName}
-                </span>
-                <span className="text-xs text-muted-foreground px-2 py-0.5 bg-muted rounded">
-                  {message.modelType}
+                <Sparkles size={14} className={getModelColor(prediction.model_name)} />
+                <span className={`font-semibold ${getModelColor(prediction.model_name)}`}>
+                  {prediction.model_name}
                 </span>
               </div>
-              <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+              <span className="text-xs text-muted-foreground">{formatDate(prediction.created_at)}</span>
             </div>
 
             {/* Prediction Badge */}
-            {message.prediction && (
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <span className="text-lg">{message.prediction.sport === "football" ? "⚽" : "🏀"}</span>
-                <span className="text-xs font-medium text-foreground bg-muted px-2 py-1 rounded">
-                  {message.prediction.target}
-                </span>
-                <span
-                  className={`text-xs font-medium px-2 py-1 rounded ${
-                    message.prediction.direction === "home"
-                      ? "bg-success/20 text-success"
-                      : message.prediction.direction === "away"
-                      ? "bg-secondary/20 text-secondary"
-                      : "bg-accent/20 text-accent"
-                  }`}
-                >
-                  {getDirectionLabel(message.prediction.direction)}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  %{message.prediction.confidence} güven
-                </span>
-              </div>
-            )}
-
-            {/* Message Content */}
-            <p
-              className={`text-sm text-muted-foreground leading-relaxed ${
-                !expandedMessages.includes(message.id) ? "line-clamp-2" : ""
-              }`}
-            >
-              {message.content}
-            </p>
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <span className="text-lg">{getSportEmoji(prediction.match_name)}</span>
+              <span className="text-xs font-medium text-foreground bg-muted px-2 py-1 rounded">
+                {prediction.match_name}
+              </span>
+              <span className="text-xs font-medium px-2 py-1 rounded bg-success/20 text-success">
+                {prediction.prediction}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                %{prediction.confidence_score} güven
+              </span>
+            </div>
 
             {/* Expand Button */}
             <button
-              onClick={() => toggleExpand(message.id)}
+              onClick={() => toggleExpand(prediction.id)}
               className="flex items-center gap-1 mt-2 text-xs text-primary hover:text-primary/80 transition-colors"
             >
-              {expandedMessages.includes(message.id) ? (
+              {expandedMessages.includes(prediction.id) ? (
                 <>
                   <ChevronUp size={14} /> Daralt
                 </>
               ) : (
                 <>
-                  <ChevronDown size={14} /> Genişlet
+                  <ChevronDown size={14} /> Detaylar
                 </>
               )}
             </button>
+
+            {expandedMessages.includes(prediction.id) && (
+              <div className="mt-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                <p>Model: {prediction.model_name}</p>
+                <p>Güven: %{prediction.confidence_score}</p>
+                <p>Tarih: {formatDate(prediction.created_at)}</p>
+              </div>
+            )}
           </div>
         ))}
+
+        {predictions?.length === 0 && !isLoading && (
+          <div className="p-4 text-center text-muted-foreground">
+            Henüz tahmin yok
+          </div>
+        )}
       </div>
     </div>
   );
