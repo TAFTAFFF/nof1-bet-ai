@@ -1,15 +1,37 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Sparkles, Bot, Loader2 } from "lucide-react";
-import { usePredictions } from "@/hooks/usePredictions";
+import { ChevronDown, ChevronUp, Sparkles, Bot, Loader2, Zap } from "lucide-react";
+import { usePredictions, analyzePrediction } from "@/hooks/usePredictions";
+import { useToast } from "@/hooks/use-toast";
 
 const ModelChat = () => {
   const [expandedMessages, setExpandedMessages] = useState<string[]>([]);
+  const [analyzingIds, setAnalyzingIds] = useState<string[]>([]);
   const { data: predictions, isLoading, error } = usePredictions();
+  const { toast } = useToast();
 
   const toggleExpand = (id: string) => {
     setExpandedMessages((prev) =>
       prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
     );
+  };
+
+  const handleAnalyze = async (predictionId: string) => {
+    setAnalyzingIds((prev) => [...prev, predictionId]);
+    try {
+      await analyzePrediction(predictionId);
+      toast({
+        title: "Analiz Tamamlandı",
+        description: "AI analizi başarıyla oluşturuldu",
+      });
+    } catch (err) {
+      toast({
+        title: "Hata",
+        description: "Analiz oluşturulurken hata oluştu",
+        variant: "destructive",
+      });
+    } finally {
+      setAnalyzingIds((prev) => prev.filter((id) => id !== predictionId));
+    }
   };
 
   const getModelColor = (modelName: string) => {
@@ -44,7 +66,10 @@ const ModelChat = () => {
           <Bot className="text-primary" size={20} />
           <span className="font-display font-semibold text-foreground">MODEL TAHMİNLERİ</span>
         </div>
-        <span className="text-xs text-muted-foreground">Veritabanından</span>
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 bg-success rounded-full animate-pulse"></span>
+          <span className="text-xs text-muted-foreground">Canlı</span>
+        </div>
       </div>
 
       {/* Messages */}
@@ -91,21 +116,56 @@ const ModelChat = () => {
               </span>
             </div>
 
-            {/* Expand Button */}
-            <button
-              onClick={() => toggleExpand(prediction.id)}
-              className="flex items-center gap-1 mt-2 text-xs text-primary hover:text-primary/80 transition-colors"
-            >
-              {expandedMessages.includes(prediction.id) ? (
-                <>
-                  <ChevronUp size={14} /> Daralt
-                </>
-              ) : (
-                <>
-                  <ChevronDown size={14} /> Detaylar
-                </>
+            {/* AI Analysis */}
+            {prediction.analysis && (
+              <div className="mt-3 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap size={14} className="text-primary" />
+                  <span className="text-xs font-semibold text-primary">AI ANALİZİ</span>
+                </div>
+                <p className="text-sm text-foreground leading-relaxed">
+                  {prediction.analysis}
+                </p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 mt-3">
+              {!prediction.analysis && (
+                <button
+                  onClick={() => handleAnalyze(prediction.id)}
+                  disabled={analyzingIds.includes(prediction.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+                >
+                  {analyzingIds.includes(prediction.id) ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" />
+                      Analiz Ediliyor...
+                    </>
+                  ) : (
+                    <>
+                      <Zap size={12} />
+                      AI ile Analiz Et
+                    </>
+                  )}
+                </button>
               )}
-            </button>
+              
+              <button
+                onClick={() => toggleExpand(prediction.id)}
+                className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+              >
+                {expandedMessages.includes(prediction.id) ? (
+                  <>
+                    <ChevronUp size={14} /> Daralt
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={14} /> Detaylar
+                  </>
+                )}
+              </button>
+            </div>
 
             {expandedMessages.includes(prediction.id) && (
               <div className="mt-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded">

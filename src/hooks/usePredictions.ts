@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export interface Prediction {
   id: string;
@@ -8,9 +9,34 @@ export interface Prediction {
   confidence_score: number;
   model_name: string;
   created_at: string;
+  analysis?: string | null;
 }
 
 export const usePredictions = () => {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('predictions-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'predictions'
+        },
+        (payload) => {
+          console.log('Realtime update:', payload);
+          queryClient.invalidateQueries({ queryKey: ["predictions"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ["predictions"],
     queryFn: async () => {
@@ -23,4 +49,16 @@ export const usePredictions = () => {
       return data as Prediction[];
     },
   });
+};
+
+export const analyzePrediction = async (predictionId: string) => {
+  const response = await supabase.functions.invoke('analyze-prediction', {
+    body: { predictionId }
+  });
+
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
+
+  return response.data;
 };
