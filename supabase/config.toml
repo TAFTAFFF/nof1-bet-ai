@@ -2,3 +2,6 @@ project_id = "bhuwaulzzflpfphjrjxx"
 
 [functions.analyze-prediction]
 verify_jwt = false
+
+[functions.fetch-matches]
+verify_jwt = false
