@@ -1,4 +1,3 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -15,9 +14,9 @@ serve(async (req) => {
   try {
     const { predictionId } = await req.json();
     
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY is not configured');
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!lovableApiKey) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -37,7 +36,6 @@ serve(async (req) => {
 
     console.log('Analyzing prediction:', prediction.match_name);
 
-    // Call Gemini API
     const prompt = `Sana vereceğim maç ismi ve tahmin için kısa, profesyonel bir bahis analizi yap.
 
 Maç: ${prediction.match_name}
@@ -51,35 +49,36 @@ Lütfen:
 
 Sadece analiz metnini yaz, başka bir şey ekleme.`;
 
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 500,
-          }
-        }),
-      }
-    );
+    // Call Lovable AI Gateway
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: 'Sen profesyonel bir bahis analistisin. Kısa, öz ve profesyonel analizler yaparsın.' },
+          { role: 'user', content: prompt }
+        ],
+      }),
+    });
 
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      console.error('Gemini API error:', errorText);
-      throw new Error('Gemini API error: ' + errorText);
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('Rate limit aşıldı, lütfen daha sonra tekrar deneyin.');
+      }
+      if (response.status === 402) {
+        throw new Error('Kredi yetersiz, lütfen hesabınıza kredi ekleyin.');
+      }
+      const errorText = await response.text();
+      console.error('AI Gateway error:', errorText);
+      throw new Error('AI Gateway error: ' + errorText);
     }
 
-    const geminiData = await geminiResponse.json();
-    const analysisText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'Analiz oluşturulamadı';
+    const aiData = await response.json();
+    const analysisText = aiData.choices?.[0]?.message?.content || 'Analiz oluşturulamadı';
 
     console.log('Analysis generated:', analysisText.substring(0, 100));
 
