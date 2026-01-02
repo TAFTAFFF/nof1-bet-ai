@@ -1,4 +1,7 @@
-import { Calendar, Clock, TrendingUp, Users } from "lucide-react";
+import { Calendar, Clock, TrendingUp, Users, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { Button } from "./ui/button";
+import { toast } from "sonner";
 
 interface Match {
   id: string;
@@ -95,6 +98,40 @@ const getPredictionLabel = (result: "home" | "draw" | "away", homeTeam: string, 
 };
 
 const UpcomingMatches = () => {
+  const [isFetching, setIsFetching] = useState(false);
+
+  const handleFetchMatches = async () => {
+    setIsFetching(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-matches`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast.error('Rate limit aşıldı, lütfen biraz bekleyin');
+          return;
+        }
+        throw new Error(data.error || 'Maçlar çekilemedi');
+      }
+
+      toast.success(`${data.matches?.length || 0} yeni maç eklendi!`);
+    } catch (error) {
+      console.error('Fetch matches error:', error);
+      toast.error('Maçlar çekilirken hata oluştu');
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
       {/* Header */}
@@ -103,7 +140,16 @@ const UpcomingMatches = () => {
           <Calendar className="text-secondary" size={20} />
           <span className="font-display font-semibold text-foreground">YAKLAŞAN MAÇLAR</span>
         </div>
-        <span className="text-xs text-muted-foreground">AI Tahminleri</span>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleFetchMatches}
+          disabled={isFetching}
+          className="text-xs"
+        >
+          <RefreshCw className={`h-3 w-3 mr-1 ${isFetching ? 'animate-spin' : ''}`} />
+          {isFetching ? 'Çekiliyor...' : 'Maçları Güncelle'}
+        </Button>
       </div>
 
       {/* Matches */}
