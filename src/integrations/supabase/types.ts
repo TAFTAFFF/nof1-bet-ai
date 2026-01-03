@@ -14,33 +14,96 @@ export type Database = {
   }
   public: {
     Tables: {
+      automation_logs: {
+        Row: {
+          analyses_generated: number | null
+          created_at: string
+          error_details: string | null
+          execution_time_ms: number | null
+          function_name: string
+          id: string
+          matches_processed: number | null
+          message: string | null
+          status: string
+        }
+        Insert: {
+          analyses_generated?: number | null
+          created_at?: string
+          error_details?: string | null
+          execution_time_ms?: number | null
+          function_name: string
+          id?: string
+          matches_processed?: number | null
+          message?: string | null
+          status: string
+        }
+        Update: {
+          analyses_generated?: number | null
+          created_at?: string
+          error_details?: string | null
+          execution_time_ms?: number | null
+          function_name?: string
+          id?: string
+          matches_processed?: number | null
+          message?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       predictions: {
         Row: {
           analysis: string | null
+          api_event_id: string | null
+          away_team: string | null
           confidence_score: number
           created_at: string
+          home_team: string | null
           id: string
+          last_updated: string | null
+          league_name: string | null
+          match_date: string | null
           match_name: string
           model_name: string
           prediction: string
+          reasoning: string | null
+          score_prediction: string | null
+          win_probability: number | null
         }
         Insert: {
           analysis?: string | null
+          api_event_id?: string | null
+          away_team?: string | null
           confidence_score: number
           created_at?: string
+          home_team?: string | null
           id?: string
+          last_updated?: string | null
+          league_name?: string | null
+          match_date?: string | null
           match_name: string
           model_name: string
           prediction: string
+          reasoning?: string | null
+          score_prediction?: string | null
+          win_probability?: number | null
         }
         Update: {
           analysis?: string | null
+          api_event_id?: string | null
+          away_team?: string | null
           confidence_score?: number
           created_at?: string
+          home_team?: string | null
           id?: string
+          last_updated?: string | null
+          league_name?: string | null
+          match_date?: string | null
           match_name?: string
           model_name?: string
           prediction?: string
+          reasoning?: string | null
+          score_prediction?: string | null
+          win_probability?: number | null
         }
         Relationships: []
       }

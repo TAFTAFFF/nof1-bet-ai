@@ -6,6 +6,7 @@ import ModelChat from "@/components/ModelChat";
 import Leaderboard from "@/components/Leaderboard";
 import UpcomingMatches from "@/components/UpcomingMatches";
 import Footer from "@/components/Footer";
+import { AutomationStatusPanel } from "@/components/AutomationStatusPanel";
 
 const Index = () => {
   return (
@@ -36,6 +37,7 @@ const Index = () => {
             <div className="lg:col-span-2 space-y-6">
               <ChartSection />
               <Leaderboard />
+              <AutomationStatusPanel />
             </div>
 
             {/* Right Column - Chat & Matches */}
