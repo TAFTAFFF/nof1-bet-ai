@@ -1,25 +1,14 @@
-import { Trophy, TrendingUp, TrendingDown, Medal } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, Medal, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-interface LeaderboardEntry {
-  rank: number;
+interface ModelStats {
   modelName: string;
-  modelType: string;
+  totalPredictions: number;
+  successfulPredictions: number;
   winRate: number;
-  totalBets: number;
-  profit: number;
-  streak: number;
+  avgConfidence: number;
 }
-
-const leaderboardData: LeaderboardEntry[] = [
-  { rank: 1, modelName: "MYSTERY-MODEL", modelType: "Agresif Strateji", winRate: 78, totalBets: 142, profit: 2847, streak: 7 },
-  { rank: 2, modelName: "CLAUDE-SONNET-4", modelType: "İstatistik Uzmanı", winRate: 72, totalBets: 128, profit: 1984, streak: 4 },
-  { rank: 3, modelName: "GPT-5-PRO", modelType: "Sürpriz Avcısı", winRate: 69, totalBets: 156, profit: 1652, streak: 3 },
-  { rank: 4, modelName: "GEMINI-3-PRO", modelType: "Güvenli Oyun", winRate: 65, totalBets: 134, profit: 1223, streak: 2 },
-  { rank: 5, modelName: "DEEPSEEK-V3.1", modelType: "İstatistik Uzmanı", winRate: 62, totalBets: 118, profit: 891, streak: 1 },
-  { rank: 6, modelName: "GROK-4.20", modelType: "Agresif Strateji", winRate: 58, totalBets: 167, profit: 412, streak: 0 },
-  { rank: 7, modelName: "LLAMA-4.1", modelType: "Güvenli Oyun", winRate: 54, totalBets: 145, profit: -234, streak: -2 },
-  { rank: 8, modelName: "MISTRAL-LARGE", modelType: "Sürpriz Avcısı", winRate: 48, totalBets: 132, profit: -523, streak: -4 },
-];
 
 const getRankIcon = (rank: number) => {
   switch (rank) {
@@ -32,6 +21,13 @@ const getRankIcon = (rank: number) => {
     default:
       return <span className="text-muted-foreground font-mono text-sm w-[18px] text-center">{rank}</span>;
   }
+};
+
+const getModelType = (modelName: string) => {
+  if (modelName.includes("Mystery") || modelName.includes("Agresif")) return "Agresif Strateji";
+  if (modelName.includes("Stat") || modelName.includes("AI Auto")) return "İstatistik Uzmanı";
+  if (modelName.includes("Oracle") || modelName.includes("Sürpriz")) return "Sürpriz Avcısı";
+  return "Güvenli Oyun";
 };
 
 const getTypeColor = (type: string) => {
@@ -50,6 +46,48 @@ const getTypeColor = (type: string) => {
 };
 
 const Leaderboard = () => {
+  const { data: modelStats, isLoading } = useQuery({
+    queryKey: ["model-leaderboard"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("predictions")
+        .select("model_name, confidence_score, prediction, analysis");
+
+      if (error) throw error;
+
+      // Group by model and calculate stats
+      const statsMap = new Map<string, { total: number; confident: number; sumConfidence: number }>();
+
+      data?.forEach((prediction) => {
+        const modelName = prediction.model_name;
+        const current = statsMap.get(modelName) || { total: 0, confident: 0, sumConfidence: 0 };
+        
+        current.total += 1;
+        current.sumConfidence += prediction.confidence_score;
+        
+        // Count predictions with analysis as "successful" for demo purposes
+        // In production, you'd track actual match results
+        if (prediction.analysis) {
+          current.confident += 1;
+        }
+        
+        statsMap.set(modelName, current);
+      });
+
+      const stats: ModelStats[] = Array.from(statsMap.entries()).map(([modelName, data]) => ({
+        modelName,
+        totalPredictions: data.total,
+        successfulPredictions: data.confident,
+        winRate: data.total > 0 ? Math.round((data.confident / data.total) * 100) : 0,
+        avgConfidence: data.total > 0 ? Math.round(data.sumConfidence / data.total) : 0
+      }));
+
+      // Sort by average confidence (simulating win rate)
+      return stats.sort((a, b) => b.avgConfidence - a.avgConfidence);
+    },
+    refetchInterval: 60000, // Refresh every minute
+  });
+
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
       {/* Header */}
@@ -58,72 +96,100 @@ const Leaderboard = () => {
           <Trophy className="text-accent" size={20} />
           <span className="font-display font-semibold text-foreground">LİDERLİK TABLOSU</span>
         </div>
-        <span className="text-xs text-muted-foreground">Sezon 1 - Spor Tahminleri</span>
+        <span className="text-xs text-muted-foreground">Gerçek Zamanlı İstatistikler</span>
       </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="animate-spin text-primary" size={24} />
+          <span className="ml-2 text-muted-foreground">Yükleniyor...</span>
+        </div>
+      )}
+
+      {/* No Data State */}
+      {!isLoading && (!modelStats || modelStats.length === 0) && (
+        <div className="p-8 text-center">
+          <Trophy className="mx-auto mb-3 text-muted-foreground" size={32} />
+          <p className="text-muted-foreground">Henüz model istatistiği yok</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Tahminler eklendikçe liderlik tablosu güncellenecek
+          </p>
+        </div>
+      )}
 
       {/* Table Header */}
-      <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-muted/50 text-xs text-muted-foreground font-medium">
-        <div className="col-span-1">#</div>
-        <div className="col-span-4">MODEL</div>
-        <div className="col-span-2 text-right">KAZANMA</div>
-        <div className="col-span-2 text-right">BAHİS</div>
-        <div className="col-span-2 text-right">KÂR</div>
-        <div className="col-span-1 text-right">SERİ</div>
-      </div>
-
-      {/* Table Body */}
-      <div className="divide-y divide-border">
-        {leaderboardData.map((entry, index) => (
-          <div
-            key={entry.modelName}
-            className={`grid grid-cols-12 gap-2 px-4 py-3 hover:bg-muted/30 transition-colors ${
-              index < 3 ? "bg-muted/20" : ""
-            }`}
-            style={{ animationDelay: `${index * 50}ms` }}
-          >
-            <div className="col-span-1 flex items-center">
-              {getRankIcon(entry.rank)}
-            </div>
-            <div className="col-span-4">
-              <div className="font-medium text-foreground text-sm">{entry.modelName}</div>
-              <div className={`text-xs ${getTypeColor(entry.modelType)}`}>{entry.modelType}</div>
-            </div>
-            <div className="col-span-2 text-right">
-              <span className="font-mono text-foreground">%{entry.winRate}</span>
-            </div>
-            <div className="col-span-2 text-right">
-              <span className="font-mono text-muted-foreground">{entry.totalBets}</span>
-            </div>
-            <div className="col-span-2 text-right flex items-center justify-end gap-1">
-              {entry.profit >= 0 ? (
-                <TrendingUp size={14} className="text-success" />
-              ) : (
-                <TrendingDown size={14} className="text-destructive" />
-              )}
-              <span
-                className={`font-mono font-medium ${
-                  entry.profit >= 0 ? "text-success" : "text-destructive"
-                }`}
-              >
-                {entry.profit >= 0 ? "+" : ""}{entry.profit}
-              </span>
-            </div>
-            <div className="col-span-1 text-right">
-              <span
-                className={`font-mono text-sm ${
-                  entry.streak > 0
-                    ? "text-success"
-                    : entry.streak < 0
-                    ? "text-destructive"
-                    : "text-muted-foreground"
-                }`}
-              >
-                {entry.streak > 0 ? `+${entry.streak}` : entry.streak}
-              </span>
-            </div>
+      {modelStats && modelStats.length > 0 && (
+        <>
+          <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-muted/50 text-xs text-muted-foreground font-medium">
+            <div className="col-span-1">#</div>
+            <div className="col-span-4">MODEL</div>
+            <div className="col-span-2 text-right">GÜVEN</div>
+            <div className="col-span-2 text-right">TAHMİN</div>
+            <div className="col-span-2 text-right">ANALİZ</div>
+            <div className="col-span-1 text-right">%</div>
           </div>
-        ))}
-      </div>
+
+          {/* Table Body */}
+          <div className="divide-y divide-border">
+            {modelStats.map((entry, index) => {
+              const modelType = getModelType(entry.modelName);
+              const rank = index + 1;
+
+              return (
+                <div
+                  key={entry.modelName}
+                  className={`grid grid-cols-12 gap-2 px-4 py-3 hover:bg-muted/30 transition-colors ${
+                    index < 3 ? "bg-muted/20" : ""
+                  }`}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className="col-span-1 flex items-center">
+                    {getRankIcon(rank)}
+                  </div>
+                  <div className="col-span-4">
+                    <div className="font-medium text-foreground text-sm truncate">{entry.modelName}</div>
+                    <div className={`text-xs ${getTypeColor(modelType)}`}>{modelType}</div>
+                  </div>
+                  <div className="col-span-2 text-right">
+                    <span className="font-mono text-foreground">%{entry.avgConfidence}</span>
+                  </div>
+                  <div className="col-span-2 text-right">
+                    <span className="font-mono text-muted-foreground">{entry.totalPredictions}</span>
+                  </div>
+                  <div className="col-span-2 text-right flex items-center justify-end gap-1">
+                    {entry.successfulPredictions > 0 ? (
+                      <TrendingUp size={14} className="text-success" />
+                    ) : (
+                      <TrendingDown size={14} className="text-muted-foreground" />
+                    )}
+                    <span
+                      className={`font-mono font-medium ${
+                        entry.successfulPredictions > 0 ? "text-success" : "text-muted-foreground"
+                      }`}
+                    >
+                      {entry.successfulPredictions}
+                    </span>
+                  </div>
+                  <div className="col-span-1 text-right">
+                    <span
+                      className={`font-mono text-sm ${
+                        entry.winRate >= 50
+                          ? "text-success"
+                          : entry.winRate > 0
+                          ? "text-accent"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {entry.winRate}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 };
