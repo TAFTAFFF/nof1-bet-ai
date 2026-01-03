@@ -10,6 +10,15 @@ export interface Prediction {
   model_name: string;
   created_at: string;
   analysis?: string | null;
+  // Enhanced fields
+  match_date?: string | null;
+  league_name?: string | null;
+  home_team?: string | null;
+  away_team?: string | null;
+  reasoning?: string | null;
+  score_prediction?: string | null;
+  win_probability?: number | null;
+  last_updated?: string | null;
 }
 
 export const usePredictions = () => {

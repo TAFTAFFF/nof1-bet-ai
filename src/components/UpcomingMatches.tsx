@@ -1,104 +1,57 @@
-import { Calendar, Clock, TrendingUp, Users, RefreshCw } from "lucide-react";
+import { Calendar, Clock, TrendingUp, Users, RefreshCw, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Prediction } from "@/hooks/usePredictions";
 
-interface Match {
-  id: string;
-  homeTeam: string;
-  awayTeam: string;
-  league: string;
-  date: string;
-  time: string;
-  homeOdds: number;
-  drawOdds?: number;
-  awayOdds: number;
-  aiPrediction: {
-    result: "home" | "draw" | "away";
-    confidence: number;
+const getPredictionLabel = (prediction: string, homeTeam: string, awayTeam: string) => {
+  const lower = prediction.toLowerCase();
+  if (lower.includes("beraberlik") || lower.includes("draw")) return "Beraberlik";
+  if (lower.includes("ev sahibi") || lower.includes("home")) return `${homeTeam} Kazanır`;
+  if (lower.includes("deplasman") || lower.includes("away")) return `${awayTeam} Kazanır`;
+  return prediction;
+};
+
+const parseMatchTeams = (matchName: string) => {
+  const parts = matchName.split(" vs ");
+  return {
+    homeTeam: parts[0]?.trim() || matchName,
+    awayTeam: parts[1]?.trim() || "Rakip"
   };
-  activeBets: number;
-  sport: "football" | "basketball";
-}
+};
 
-const upcomingMatches: Match[] = [
-  {
-    id: "1",
-    homeTeam: "Galatasaray",
-    awayTeam: "Fenerbahçe",
-    league: "Süper Lig",
-    date: "15 Aralık",
-    time: "21:00",
-    homeOdds: 1.85,
-    drawOdds: 3.40,
-    awayOdds: 4.20,
-    aiPrediction: { result: "home", confidence: 72 },
-    activeBets: 847,
-    sport: "football",
-  },
-  {
-    id: "2",
-    homeTeam: "Anadolu Efes",
-    awayTeam: "Fenerbahçe Beko",
-    league: "Euroleague",
-    date: "15 Aralık",
-    time: "20:00",
-    homeOdds: 1.72,
-    awayOdds: 2.15,
-    aiPrediction: { result: "home", confidence: 62 },
-    activeBets: 534,
-    sport: "basketball",
-  },
-  {
-    id: "3",
-    homeTeam: "Real Madrid",
-    awayTeam: "Barcelona",
-    league: "La Liga",
-    date: "16 Aralık",
-    time: "22:00",
-    homeOdds: 1.95,
-    drawOdds: 3.50,
-    awayOdds: 3.80,
-    aiPrediction: { result: "home", confidence: 68 },
-    activeBets: 1243,
-    sport: "football",
-  },
-  {
-    id: "4",
-    homeTeam: "Lakers",
-    awayTeam: "Celtics",
-    league: "NBA",
-    date: "16 Aralık",
-    time: "03:30",
-    homeOdds: 2.10,
-    awayOdds: 1.75,
-    aiPrediction: { result: "away", confidence: 65 },
-    activeBets: 1876,
-    sport: "basketball",
-  },
-  {
-    id: "5",
-    homeTeam: "Man City",
-    awayTeam: "Liverpool",
-    league: "Premier League",
-    date: "17 Aralık",
-    time: "18:30",
-    homeOdds: 2.10,
-    drawOdds: 3.30,
-    awayOdds: 3.40,
-    aiPrediction: { result: "home", confidence: 58 },
-    activeBets: 1567,
-    sport: "football",
-  },
-];
+const getSportType = (matchName: string): "football" | "basketball" => {
+  const basketballKeywords = ["Lakers", "Celtics", "Warriors", "Nuggets", "Efes", "Beko", "NBA", "Euroleague"];
+  return basketballKeywords.some(k => matchName.includes(k)) ? "basketball" : "football";
+};
 
-const getPredictionLabel = (result: "home" | "draw" | "away", homeTeam: string, awayTeam: string, sport: string) => {
-  if (result === "draw") return "Beraberlik";
-  return result === "home" ? `${homeTeam} Kazanır` : `${awayTeam} Kazanır`;
+const formatMatchDate = (dateStr: string | null, createdAt: string) => {
+  const date = dateStr ? new Date(dateStr) : new Date(createdAt);
+  return {
+    date: new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: 'long' }).format(date),
+    time: new Intl.DateTimeFormat('tr-TR', { hour: '2-digit', minute: '2-digit' }).format(date)
+  };
 };
 
 const UpcomingMatches = () => {
   const [isFetching, setIsFetching] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: predictions, isLoading, error } = useQuery({
+    queryKey: ["upcoming-matches"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("predictions")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(8);
+
+      if (error) throw error;
+      return data as Prediction[];
+    },
+  });
 
   const handleFetchMatches = async () => {
     setIsFetching(true);
@@ -123,7 +76,9 @@ const UpcomingMatches = () => {
         throw new Error(data.error || 'Maçlar çekilemedi');
       }
 
-      toast.success(`${data.matches?.length || 0} yeni maç eklendi!`);
+      toast.success(`${data.matches?.length || 0} maç güncellendi!`);
+      queryClient.invalidateQueries({ queryKey: ["upcoming-matches"] });
+      queryClient.invalidateQueries({ queryKey: ["predictions"] });
     } catch (error) {
       console.error('Fetch matches error:', error);
       toast.error('Maçlar çekilirken hata oluştu');
@@ -152,71 +107,107 @@ const UpcomingMatches = () => {
         </Button>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="animate-spin text-primary" size={24} />
+          <span className="ml-2 text-muted-foreground">Yükleniyor...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="p-4 text-center text-destructive">
+          Veriler yüklenirken hata oluştu
+        </div>
+      )}
+
+      {/* No Data State */}
+      {!isLoading && !error && predictions?.length === 0 && (
+        <div className="p-8 text-center">
+          <Calendar className="mx-auto mb-3 text-muted-foreground" size={32} />
+          <p className="text-muted-foreground">Henüz maç verisi yok</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            "Maçları Güncelle" butonuna tıklayarak verileri çekin
+          </p>
+        </div>
+      )}
+
       {/* Matches */}
       <div className="divide-y divide-border">
-        {upcomingMatches.map((match) => (
-          <div key={match.id} className="p-4 hover:bg-muted/30 transition-colors">
-            {/* League & Time */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{match.sport === "football" ? "⚽" : "🏀"}</span>
-                <span className="text-xs text-secondary font-medium">{match.league}</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Calendar size={12} />
-                {match.date}
-                <Clock size={12} />
-                {match.time}
-              </div>
-            </div>
+        {predictions?.map((prediction) => {
+          const { homeTeam, awayTeam } = parseMatchTeams(prediction.match_name);
+          const sport = getSportType(prediction.match_name);
+          const { date, time } = formatMatchDate(prediction.match_date, prediction.created_at);
+          const winProbability = prediction.win_probability || prediction.confidence_score;
 
-            {/* Teams */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex-1">
-                <span className="font-medium text-foreground">{match.homeTeam}</span>
+          return (
+            <div key={prediction.id} className="p-4 hover:bg-muted/30 transition-colors">
+              {/* League & Time */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{sport === "football" ? "⚽" : "🏀"}</span>
+                  <span className="text-xs text-secondary font-medium">
+                    {prediction.league_name || "Lig Bilgisi Yok"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Calendar size={12} />
+                  {date}
+                  <Clock size={12} />
+                  {time}
+                </div>
               </div>
-              <div className="px-4">
-                <span className="text-muted-foreground text-sm">vs</span>
-              </div>
-              <div className="flex-1 text-right">
-                <span className="font-medium text-foreground">{match.awayTeam}</span>
-              </div>
-            </div>
 
-            {/* Odds */}
-            <div className={`grid ${match.sport === "basketball" ? "grid-cols-2" : "grid-cols-3"} gap-2 mb-3`}>
-              <div className={`text-center p-2 rounded ${match.aiPrediction.result === "home" ? "bg-primary/20 border border-primary" : "bg-muted"}`}>
-                <div className="text-xs text-muted-foreground mb-1">1</div>
-                <div className="font-mono font-medium text-foreground">{match.homeOdds}</div>
+              {/* Teams */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex-1">
+                  <span className="font-medium text-foreground">{homeTeam}</span>
+                </div>
+                <div className="px-4">
+                  <span className="text-muted-foreground text-sm">vs</span>
+                </div>
+                <div className="flex-1 text-right">
+                  <span className="font-medium text-foreground">{awayTeam}</span>
+                </div>
               </div>
-              {match.drawOdds && (
-                <div className={`text-center p-2 rounded ${match.aiPrediction.result === "draw" ? "bg-primary/20 border border-primary" : "bg-muted"}`}>
-                  <div className="text-xs text-muted-foreground mb-1">X</div>
-                  <div className="font-mono font-medium text-foreground">{match.drawOdds}</div>
+
+              {/* Score Prediction */}
+              {prediction.score_prediction && (
+                <div className="mb-3 text-center">
+                  <span className="text-xs text-muted-foreground">Skor Tahmini: </span>
+                  <span className="font-mono font-bold text-primary">{prediction.score_prediction}</span>
                 </div>
               )}
-              <div className={`text-center p-2 rounded ${match.aiPrediction.result === "away" ? "bg-primary/20 border border-primary" : "bg-muted"}`}>
-                <div className="text-xs text-muted-foreground mb-1">2</div>
-                <div className="font-mono font-medium text-foreground">{match.awayOdds}</div>
-              </div>
-            </div>
 
-            {/* AI Prediction */}
-            <div className="flex items-center justify-between bg-muted/50 rounded p-2">
-              <div className="flex items-center gap-2">
-                <TrendingUp size={14} className="text-primary" />
-                <span className="text-xs text-foreground">
-                  AI: <span className="text-primary font-medium">{getPredictionLabel(match.aiPrediction.result, match.homeTeam, match.awayTeam, match.sport)}</span>
-                </span>
-                <span className="text-xs text-muted-foreground">(%{match.aiPrediction.confidence} güven)</span>
+              {/* AI Prediction */}
+              <div className="flex items-center justify-between bg-muted/50 rounded p-2">
+                <div className="flex items-center gap-2">
+                  <TrendingUp size={14} className="text-primary" />
+                  <span className="text-xs text-foreground">
+                    AI: <span className="text-primary font-medium">
+                      {getPredictionLabel(prediction.prediction, homeTeam, awayTeam)}
+                    </span>
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    (%{winProbability} güven)
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Users size={12} />
+                  {prediction.model_name}
+                </div>
               </div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Users size={12} />
-                {match.activeBets} bahis
-              </div>
+
+              {/* Reasoning */}
+              {prediction.reasoning && (
+                <div className="mt-2 p-2 bg-primary/5 border border-primary/10 rounded text-xs text-muted-foreground">
+                  {prediction.reasoning}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
